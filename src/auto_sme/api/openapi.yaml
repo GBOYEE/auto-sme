@@ -1,0 +1,261 @@
+openapi: 3.0.3
+info:
+  title: AutoSME API
+  version: 0.1.0
+  description: AI automation for African small businesses
+servers:
+  - url: /api/v1
+    description: Local development (adjust for production)
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    Task:
+      type: object
+      required: [name, cron]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        cron:
+          type: string
+          description: Cron expression (e.g., "0 9 * * *")
+        action:
+          type: string
+          enum: [sms_alert, inventory_check, sales_report]
+        payload:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+
+    Product:
+      type: object
+      required: [name, price, unit]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price:
+          type: number
+          format: float
+        unit:
+          type: string
+          example: "piece"
+        stock:
+          type: integer
+          default: 0
+        low_stock_threshold:
+          type: integer
+          default: 10
+
+    Order:
+      type: object
+      required: [customer_phone, items]
+      properties:
+        id:
+          type: string
+          format: uuid
+        customer_phone:
+          type: string
+          example: "+234801234567"
+        customer_name:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        total_amount:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [pending, confirmed, out_for_delivery, delivered, cancelled]
+        created_at:
+          type: string
+          format: date-time
+
+    OrderItem:
+      type: object
+      required: [product_id, quantity]
+      properties:
+        product_id:
+          type: string
+        product_name:
+          type: string
+        quantity:
+          type: integer
+        unit_price:
+          type: number
+          format: float
+
+    SalesReport:
+      type: object
+      properties:
+        period:
+          type: string
+          example: "2025-03-01 to 2025-03-31"
+        total_orders:
+          type: integer
+        total_revenue:
+          type: number
+          format: float
+        top_products:
+          type: array
+          items:
+            product_name: string
+            quantity: integer
+            revenue: number
+
+paths:
+  /tasks:
+    post:
+      summary: Create a new scheduled task
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Task'
+              required: [name, cron, action]
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Invalid payload
+
+    get:
+      summary: List tasks for tenant
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, paused, all]
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+
+  /inventory:
+    post:
+      summary: Add a new product to inventory
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+              required: [name, price, unit]
+      responses:
+        '201':
+          description: Product created
+        '400':
+          description: Invalid payload
+
+    patch:
+      summary: Adjust stock level for a product
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [delta]
+              properties:
+                delta:
+                  type: integer
+                  description: Positive to add, negative to subtract
+      responses:
+        '200':
+          description: Stock updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+
+  /orders:
+    post:
+      summary: Create a new order (from WhatsApp webhook)
+      # No API key required for webhook inbound; could have separate secret verification
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+              required: [customer_phone, items]
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Invalid payload
+
+  /reports/sales:
+    get:
+      summary: Generate sales report (PDF)
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Invalid date range
