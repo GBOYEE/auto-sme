@@ -18,7 +18,28 @@ client = TestClient(create_app())
 def test_health():
     resp = client.get("/health")
     assert resp.status_code == 200
-    assert resp.json()["status"] == "ok"
+    data = resp.json()
+    assert data["status"] == "ok"
+    assert "timestamp" in data
+    assert "version" in data
+    assert data["version"] == "0.2.0"
+
+def test_metrics():
+    resp = client.get("/metrics")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "requests_total" in data
+    assert isinstance(data["requests_total"], int)
+    # Create a product to increment some metrics via app logic (if any)
+    client.post(
+        "/api/v1/inventory",
+        json={"name": "Test", "price": 1.0, "unit": "unit"},
+        headers={"X-API-Key": "dev-key"},
+    )
+    # Metrics should have increased
+    resp2 = client.get("/metrics")
+    assert resp2.json()["requests_total"] >= data["requests_total"] + 1
+
 
 def test_create_product():
     resp = client.post(
@@ -169,3 +190,14 @@ def test_sales_report():
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "application/pdf"
     assert len(resp.content) > 0
+def test_missing_api_key():
+    """Protected endpoints must require X-API-Key."""
+    resp = client.post("/api/v1/inventory", json={"name": "NoKey", "price": 1.0, "unit": "unit"})
+    assert resp.status_code == 403
+    assert "Missing API key" in resp.json()["detail"]
+
+def test_request_id_header():
+    """Every response should include X-Request-ID."""
+    resp = client.get("/health")
+    assert "X-Request-ID" in resp.headers
+    assert len(resp.headers["X-Request-ID"]) == 8
