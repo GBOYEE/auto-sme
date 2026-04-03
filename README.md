@@ -148,7 +148,9 @@ mypy src/auto_sme
 
 ## 🚢 Deployment
 
-- **Docker**: `docker-compose up -d`
+- **Docker Compose** (recommended): `docker-compose up -d`
+- **Railway** (one-click): [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/auto-sme)
+  - Environment variables: `AUTOSME_API_KEY`, `DATABASE_URL` (Railway provides Postgres addon)
 - **Systemd**: See `README-PRODUCTION.md` for unit file
 - **Nginx**: Reverse proxy to `localhost:8000`
 
