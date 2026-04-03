@@ -3,6 +3,7 @@
 AI automation for African small businesses. Production-ready FastAPI backend with inventory, orders, WhatsApp integration, and PDF reporting.
 
 [![CI](https://github.com/GBOYEE/auto-sme/actions/workflows/ci.yml/badge.svg)](https://github.com/GBOYEE/auto-sme/actions)
+[![Coverage](https://img.shields.io/badge/coverage-78%25-brightgreen.svg)](https://github.com/GBOYEE/auto-sme/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -69,7 +70,57 @@ Set via `AUTOSME_API_KEY` environment variable.
 
 ## 🏗️ Architecture
 
-See [Production Guide](README-PRODUCTION.md#architecture) for system diagram and component overview.
+```mermaid
+graph TB
+    subgraph "External Interfaces"
+        WA[WhatsApp Webhook]
+        UI[Dashboard / API]
+    end
+
+    subgraph "AutoSME API (FastAPI)"
+        API[FastAPI App]
+        INV[Inventory Router]
+        ORD[Orders Router]
+        TAS[Tasks Router]
+        REP[Reports Router]
+    end
+
+    subgraph "Data Layer"
+        PG[(PostgreSQL)]
+        REDIS[(Redis Cache)]
+    end
+
+    subgraph "Operations"
+        CLI[CLI Tool]
+        SCHED[Scheduler]
+    end
+
+    WA --> API
+    UI --> API
+    API --> INV
+    API --> ORD
+    API --> TAS
+    API --> REP
+
+    INV --> PG
+    ORD --> PG
+    TAS --> PG
+    REP --> PG
+
+    ORD --> REDIS
+    TAS --> REDIS
+
+    SCHED --> API
+    CLI --> API
+```
+
+**Components:**
+- **FastAPI** — async REST API with OpenAPI docs at `/docs`
+- **PostgreSQL** — persistent storage (products, orders, tasks)
+- **Redis** — caching and background job queue
+- **Docker Compose** — one-command deployment with health checks
+
+Full architecture guide: [README-PRODUCTION.md](README-PRODUCTION.md#architecture)
 
 ---
 
