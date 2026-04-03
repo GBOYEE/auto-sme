@@ -1,0 +1,36 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfile": "Dockerfile"
+  },
+  "deploy": {
+    "startCommand": "python -m src.auto_sme.main",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30,
+    "restartPolicy": {
+      "type": "ON_FAILURE"
+    },
+    "services": [
+      {
+        "name": "postgres",
+        "type": "POSTGRES",
+        "envVars": {
+          "POSTGRES_USER": "auto_sme",
+          "POSTGRES_PASSWORD": "auto_sme",
+          "POSTGRES_DB": "auto_sme"
+        }
+      }
+    ]
+  },
+  "variables": {
+    "AUTOSME_ENV": "production",
+    "DATABASE_URL": {
+      "fromService": {
+        "name": "postgres",
+        "type": "POSTGRES",
+        "connectionString": true
+      }
+    }
+  }
+}
