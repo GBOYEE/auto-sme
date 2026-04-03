@@ -3,7 +3,7 @@
 AI automation for African small businesses. Production-ready FastAPI backend with inventory, orders, WhatsApp integration, and PDF reporting.
 
 [![CI](https://github.com/GBOYEE/auto-sme/actions/workflows/ci.yml/badge.svg)](https://github.com/GBOYEE/auto-sme/actions)
-[![Coverage](https://img.shields.io/badge/coverage-78%25-brightgreen.svg)](https://github.com/GBOYEE/auto-sme/actions)
+[![Coverage](https://codecov.io/gh/GBOYEE/auto-sme/branch/main/graph/badge.svg)](https://codecov.io/gh/GBOYEE/auto-sme)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
