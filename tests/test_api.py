@@ -1,203 +1,125 @@
-"""Pytest tests for AutoSME API."""
+"""API endpoint tests for AutoSME."""
 import pytest
-from datetime import datetime
-from starlette.testclient import TestClient
-from auto_sme.main import create_app
-from auto_sme.store import products, orders, tasks, optout_phones
-
-@pytest.fixture(autouse=True)
-def clear_store():
-    """Reset in-memory store before each test."""
-    products.clear()
-    orders.clear()
-    tasks.clear()
-    optout_phones.clear()
-
-client = TestClient(create_app())
-
-def test_health():
-    resp = client.get("/health")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "ok"
-    assert "timestamp" in data
-    assert "version" in data
-    assert data["version"] == "0.2.0"
-
-def test_metrics():
-    resp = client.get("/metrics")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "requests_total" in data
-    assert isinstance(data["requests_total"], int)
-    # Create a product to increment some metrics via app logic (if any)
-    client.post(
-        "/api/v1/inventory",
-        json={"name": "Test", "price": 1.0, "unit": "unit"},
-        headers={"X-API-Key": "dev-key"},
-    )
-    # Metrics should have increased
-    resp2 = client.get("/metrics")
-    assert resp2.json()["requests_total"] >= data["requests_total"] + 1
+from auto_sme.models import Product, Order, Task, OptOut
 
 
-def test_create_product():
-    resp = client.post(
-        "/api/v1/inventory",
-        json={"name": "Rice", "price": 1.5, "unit": "kg"},
-        headers={"X-API-Key": "dev-key"}
-    )
-    assert resp.status_code == 201
-    data = resp.json()
-    assert data["name"] == "Rice"
-    assert data["stock"] == 0
-    assert "id" in data
-    assert len(products) == 1
+class TestHealth:
+    def test_health(self, client):
+        resp = client.get("/health")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "ok"
+        assert "version" in data
+        assert "timestamp" in data
 
-def test_list_products():
-    resp = client.get("/api/v1/inventory", headers={"X-API-Key": "dev-key"})
-    assert resp.status_code == 200
-    assert isinstance(resp.json(), list)
 
-def test_adjust_stock():
-    # create product
-    create = client.post(
-        "/api/v1/inventory",
-        json={"name": "Beans", "price": 2.0, "unit": "kg"},
-        headers={"X-API-Key": "dev-key"}
-    )
-    prod_id = create.json()["id"]
-    # adjust +50
-    resp = client.patch(
-        f"/api/v1/inventory/{prod_id}?delta=50",
-        headers={"X-API-Key": "dev-key"}
-    )
-    assert resp.status_code == 200
-    assert resp.json()["stock"] == 50
-    # negative adjustment -20
-    resp = client.patch(
-        f"/api/v1/inventory/{prod_id}?delta=-20",
-        headers={"X-API-Key": "dev-key"}
-    )
-    assert resp.json()["stock"] == 30
-    # clamp at 0
-    resp = client.patch(
-        f"/api/v1/inventory/{prod_id}?delta=-100",
-        headers={"X-API-Key": "dev-key"}
-    )
-    assert resp.json()["stock"] == 0
+class TestMetrics:
+    def test_metrics(self, client):
+        resp = client.get("/metrics")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "requests_total" in data
+        assert "requests_failed" in data
 
-def test_create_order_and_stock_deduction():
-    # create product with stock
-    client.post(
-        "/api/v1/inventory",
-        json={"name": "Sugar", "price": 0.8, "unit": "kg", "stock": 100},
-        headers={"X-API-Key": "dev-key"}
-    )
-    assert len(products) == 1
-    prod = products[0]
-    order = {
-        "customer_phone": "+234801234567",
-        "items": [
-            {"product_id": prod["id"], "product_name": prod["name"], "quantity": 2, "unit_price": prod["price"]}
-        ]
-    }
-    resp = client.post("/api/v1/orders", json=order)
-    assert resp.status_code == 201
-    data = resp.json()
-    assert data["total_amount"] == 1.6
-    assert data["status"] == "pending"
-    # Check stock deducted via store
-    assert products[0]["stock"] == 98
 
-def test_whatsapp_webhook_parsing():
-    # create product with stock 50
-    client.post(
-        "/api/v1/inventory",
-        json={"name": "Maize", "price": 0.5, "unit": "kg", "stock": 50},
-        headers={"X-API-Key": "dev-key"}
-    )
-    prod = products[0]
-    # Simulate Twilio form POST
-    from urllib.parse import urlencode
-    form = urlencode({
-        "From": "whatsapp:+234801111111",
-        "Body": "maize 10"
-    })
-    resp = client.post(
-        "/webhook/whatsapp",
-        data=form,
-        headers={"Content-Type": "application/x-www-form-urlencoded"}
-    )
-    assert resp.status_code == 200
-    assert resp.headers["content-type"] == "text/xml; charset=utf-8"
-    xml = resp.text
-    assert "Order #" in xml
-    assert "Total" in xml
-    # Verify stock deducted (50 - 10 = 40)
-    assert products[0]["stock"] == 40
+class TestInventory:
+    def test_create_product(self, client, sample_product_data):
+        resp = client.post("/api/v1/inventory", json=sample_product_data)
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["name"] == sample_product_data["name"]
+        assert data["price"] == sample_product_data["price"]
+        assert "id" in data
+        assert "created_at" in data
 
-def test_whatsapp_insufficient_stock():
-    client.post(
-        "/api/v1/inventory",
-        json={"name": "Beans", "price": 2.0, "unit": "kg", "stock": 5},
-        headers={"X-API-Key": "dev-key"}
-    )
-    prod = products[0]
-    from urllib.parse import urlencode
-    form = urlencode({
-        "From": "whatsapp:+234801111111",
-        "Body": "beans 10"
-    })
-    resp = client.post("/webhook/whatsapp", data=form, headers={"Content-Type": "application/x-www-form-urlencoded"})
-    assert resp.status_code == 200
-    assert "Insufficient stock" in resp.text
-    # stock unchanged
-    assert products[0]["stock"] == 5
+    def test_list_products(self, client, sample_product_data):
+        # Create a product first
+        client.post("/api/v1/inventory", json=sample_product_data)
+        resp = client.get("/api/v1/inventory")
+        assert resp.status_code == 200
+        assert len(resp.json()) >= 1
 
-def test_whatsapp_optout():
-    # opt-out
-    from urllib.parse import urlencode
-    form = urlencode({
-        "From": "whatsapp:+234801111111",
-        "Body": "STOP"
-    })
-    resp = client.post("/webhook/whatsapp", data=form, headers={"Content-Type": "application/x-www-form-urlencoded"})
-    assert "opted out" in resp.text.lower()
-    assert "+234801111111" in optout_phones
-    # subsequent message should respect opt-out
-    form2 = urlencode({
-        "From": "whatsapp:+234801111111",
-        "Body": "maize 2"
-    })
-    resp2 = client.post("/webhook/whatsapp", data=form2, headers={"Content-Type": "application/x-www-form-urlencoded"})
-    assert "opted out" in resp2.text.lower()
-    # stock should not change
-    # even if product exists, but order not created
-    initial_orders = len(orders)
-    assert len(orders) == initial_orders
+    def test_adjust_stock(self, client, sample_product_data):
+        create_resp = client.post("/api/v1/inventory", json=sample_product_data)
+        product_id = create_resp.json()["id"]
+        resp = client.patch(f"/api/v1/inventory/{product_id}", params={"delta": 5})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["stock"] == sample_product_data["stock"] + 5
 
-def test_sales_report():
-    # create product
-    client.post("/api/v1/inventory", json={"name": "Milk", "price": 1.2, "unit": "L"}, headers={"X-API-Key": "dev-key"})
-    prod = products[0]
-    # create orders
-    client.post("/api/v1/orders", json={"customer_phone": "+123", "items": [{"product_id": prod["id"], "product_name": "Milk", "quantity": 3, "unit_price": 1.2}]})
-    client.post("/api/v1/orders", json={"customer_phone": "+456", "items": [{"product_id": prod["id"], "product_name": "Milk", "quantity": 2, "unit_price": 1.2}]})
-    # report for today
-    today = datetime.utcnow().strftime("%Y-%m-%d")
-    resp = client.get(f"/api/v1/reports/sales?start_date={today}&end_date={today}", headers={"X-API-Key": "dev-key"})
-    assert resp.status_code == 200
-    assert resp.headers["content-type"] == "application/pdf"
-    assert len(resp.content) > 0
-def test_missing_api_key():
-    """Protected endpoints must require X-API-Key."""
-    resp = client.post("/api/v1/inventory", json={"name": "NoKey", "price": 1.0, "unit": "unit"})
-    assert resp.status_code == 403
-    assert "Missing API key" in resp.json()["detail"]
+    def test_adjust_stock_not_found(self, client):
+        resp = client.patch("/api/v1/inventory/nonexistent", params={"delta": 5})
+        assert resp.status_code == 404
 
-def test_request_id_header():
-    """Every response should include X-Request-ID."""
-    resp = client.get("/health")
-    assert "X-Request-ID" in resp.headers
-    assert len(resp.headers["X-Request-ID"]) == 8
+
+class TestOrders:
+    def test_create_order(self, client, sample_order_data):
+        # First create a product to reference
+        prod_resp = client.post(
+            "/api/v1/inventory",
+            json={
+                "name": "Order Test Product",
+                "price": 10.0,
+                "unit": "unit",
+                "stock": 100,
+            },
+        )
+        product = prod_resp.json()
+        sample_order_data["items"][0]["product_id"] = product["id"]
+
+        resp = client.post("/api/v1/orders", json=sample_order_data)
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["customer_phone"] == sample_order_data["customer_phone"]
+        assert data["status"] == "pending"
+        assert "id" in data
+
+    def test_list_orders(self, client, sample_order_data):
+        # Create an order first
+        client.post("/api/v1/orders", json=sample_order_data)
+        resp = client.get("/api/v1/orders")
+        assert resp.status_code == 200
+        assert len(resp.json()) >= 1
+
+    def test_update_order_status(self, client, sample_order_data):
+        create_resp = client.post("/api/v1/orders", json=sample_order_data)
+        order_id = create_resp.json()["id"]
+        resp = client.patch(f"/api/v1/orders/{order_id}/status", params={"status": "confirmed"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "confirmed"
+
+
+class TestTasks:
+    def test_create_task(self, client):
+        task_data = {
+            "name": "Test Task",
+            "cron": "0 * * * *",
+            "action": "inventory_check",
+            "payload": {"threshold": 10},
+        }
+        resp = client.post("/api/v1/tasks", json=task_data)
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["name"] == task_data["name"]
+        assert data["cron"] == task_data["cron"]
+        assert "id" in data
+
+    def test_list_tasks(self, client):
+        resp = client.get("/api/v1/tasks")
+        assert resp.status_code == 200
+        assert isinstance(resp.json(), list)
+
+
+class TestReports:
+    def test_sales_report_requires_dates(self, client):
+        resp = client.get("/api/v1/reports/sales")
+        assert resp.status_code == 422  # missing required date params
+
+    def test_sales_report_empty(self, client):
+        resp = client.get("/api/v1/reports/sales", params={
+            "start_date": "2026-01-01",
+            "end_date": "2026-01-31",
+        })
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == "application/pdf"

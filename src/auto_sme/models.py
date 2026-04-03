@@ -1,6 +1,6 @@
 """SQLAlchemy models for AutoSME."""
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, MetaData
+from sqlalchemy import Column, String, Integer, Float, DateTime, JSON
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -20,21 +20,23 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(String, primary_key=True)
-    product_id = Column(String, nullable=False)
-    quantity = Column(Integer, nullable=False)
-    total_price = Column(Float, nullable=False)
+    customer_phone = Column(String, nullable=False)
+    customer_name = Column(String, nullable=True)
+    items = Column(JSON, nullable=False)  # List[dict]
+    total_amount = Column(Float, nullable=False)
+    status = Column(String, default="pending")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Task(Base):
     __tablename__ = "tasks"
 
     id = Column(String, primary_key=True)
-    description = Column(String, nullable=False)
-    type = Column(String, nullable=False)
-    params = Column(String, nullable=True)  # JSON string
+    name = Column(String, nullable=False)
+    cron = Column(String, nullable=True)
+    action = Column(String, nullable=False)
+    payload = Column(JSON, nullable=True)  # dict
     status = Column(String, default="pending")
     created_at = Column(DateTime, default=datetime.utcnow)
-    completed_at = Column(DateTime, nullable=True)
 
 class OptOut(Base):
     __tablename__ = "optouts"

@@ -8,6 +8,7 @@ from .models import Product, Order, Task, OptOut
 # Products
 def create_product(db: Session, name: str, price: float, unit: str, stock: int = 0, low_stock_threshold: int = 10) -> Product:
     prod = Product(
+        id=str(uuid.uuid4()),
         name=name,
         price=price,
         unit=unit,
