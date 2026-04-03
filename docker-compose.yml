@@ -1,6 +1,21 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=auto_sme
+      - POSTGRES_PASSWORD=auto_sme
+      - POSTGRES_DB=auto_sme
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auto_sme"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build: .
     ports:
@@ -9,7 +24,7 @@ services:
       - AUTOSME_ENV=${AUTOSME_ENV:-production}
       - AUTOSME_API_KEY=${AUTOSME_API_KEY}
       - AUTOSME_CORS_ORIGINS=${AUTOSME_CORS_ORIGINS:-*}
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///data/app.db}
+      - DATABASE_URL=${DATABASE_URL:-postgresql+psycopg2://auto_sme:auto_sme@postgres/auto_sme}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
     volumes:
       - ./data:/app/data
@@ -20,6 +35,8 @@ services:
       timeout: 5s
       retries: 3
     depends_on:
+      postgres:
+        condition: service_healthy
       - redis
 
   redis:
@@ -31,4 +48,5 @@ services:
     restart: unless-stopped
 
 volumes:
+  postgres_data:
   redis_data:

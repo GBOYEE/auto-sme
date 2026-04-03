@@ -2,14 +2,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import List, Optional
-import uuid
 from datetime import datetime
 from auto_sme.dependencies import verify_api_key
+from auto_sme.crud import create_task, get_tasks
+from auto_sme.database import get_db
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/tasks", dependencies=[Depends(verify_api_key)])
-
-# In-memory store for MVP; will be replaced with DB
-_tasks_db: List[dict] = []
 
 class TaskCreate(BaseModel):
     name: str
@@ -21,24 +20,19 @@ class Task(TaskCreate):
     id: str
     created_at: datetime
 
+    class Config:
+        from_attributes = True
+
 @router.post("", response_model=Task, status_code=status.HTTP_201_CREATED)
-async def create_task(task: TaskCreate, api_key: str = Depends(lambda: None)):
-    # TODO: use agent-core to interpret natural language if needed
-    new_task = {
-        "id": str(uuid.uuid4()),
-        "name": task.name,
-        "cron": task.cron,
-        "action": task.action,
-        "payload": task.payload or {},
-        "created_at": datetime.utcnow(),
-    }
-    _tasks_db.append(new_task)
-    # TODO: schedule via automation-engine
-    return new_task
+async def create_task_endpoint(task: TaskCreate, db: Session = Depends(get_db)):
+    return create_task(
+        db=db,
+        name=task.name,
+        cron=task.cron,
+        action=task.action,
+        payload=task.payload
+    )
 
 @router.get("", response_model=List[Task])
-async def list_tasks(status: Optional[str] = None, api_key: str = Depends(lambda: None)):
-    if status == "active":
-        # Filter by cron presence (dummy)
-        return [t for t in _tasks_db if t.get("cron")]
-    return _tasks_db
+async def list_tasks(status: Optional[str] = None, db: Session = Depends(get_db)):
+    return get_tasks(db, status=status)

@@ -5,11 +5,13 @@ import uuid
 import logging
 from typing import Dict
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from .routers import tasks, inventory, orders, reports, whatsapp
+from .database import init_db, get_db
+from .dependencies import verify_api_key
 
 # Configure structured logging
 logging.basicConfig(
@@ -23,7 +25,7 @@ APP_VERSION = "0.2.0"
 ENV = os.getenv("AUTOSME_ENV", "production")
 ALLOWED_ORIGINS = os.getenv("AUTOSME_CORS_ORIGINS", "*").split(",")
 
-# Metrics store (in-memory; use Redis in production)
+# Metrics store (in-memory; simple, sufficient for now)
 metrics_store: Dict[str, int] = {
     "requests_total": 0,
     "requests_failed": 0,
@@ -90,7 +92,13 @@ def create_app() -> FastAPI:
         """Expose internal metrics."""
         return metrics_store
 
-    # Include routers (they have their own API key dependency)
+    # Initialize database on startup
+    @app.on_event("startup")
+    def on_startup():
+        init_db()
+        logger.info("Database initialized")
+
+    # Include routers
     app.include_router(tasks.router, prefix="/api/v1")
     app.include_router(inventory.router, prefix="/api/v1")
     app.include_router(orders.router, prefix="/api/v1")

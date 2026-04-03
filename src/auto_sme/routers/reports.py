@@ -9,14 +9,17 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from auto_sme.dependencies import verify_api_key
-from auto_sme.store import orders as _orders_db, products as _products_db
+from auto_sme.crud import get_orders, get_products
+from auto_sme.database import get_db
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/reports", dependencies=[Depends(verify_api_key)])
 
 @router.get("/sales")
 async def sales_report(
     start_date: str = Query(..., description="YYYY-MM-DD"),
-    end_date: str = Query(..., description="YYYY-MM-DD")
+    end_date: str = Query(..., description="YYYY-MM-DD"),
+    db: Session = Depends(get_db)
 ):
     try:
         start = datetime.strptime(start_date, "%Y-%m-%d")
@@ -24,21 +27,25 @@ async def sales_report(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format")
 
+    orders = get_orders(db)
     period_orders = [
-        o for o in _orders_db
-        if start <= o["created_at"] <= end
+        o for o in orders
+        if isinstance(o.created_at, datetime) and start <= o.created_at.replace(tzinfo=None) <= end
     ]
     total_orders = len(period_orders)
-    total_revenue = sum(o["total_amount"] for o in period_orders)
+    total_revenue = sum(o.total_amount for o in period_orders)
 
     # Top products aggregation
     product_quantities = {}
     product_revenue = {}
     for o in period_orders:
-        for item in o["items"]:
+        for item in o.items:
             pid = item["product_id"]
             product_quantities[pid] = product_quantities.get(pid, 0) + item["quantity"]
             product_revenue[pid] = product_revenue.get(pid, 0) + item["quantity"] * item["unit_price"]
+
+    # Get all products for name lookup
+    products = {p.id: p for p in get_products(db)}
 
     # Create PDF
     buffer = BytesIO()
@@ -73,7 +80,8 @@ async def sales_report(
         story.append(Spacer(1, 12))
         prod_data = [["Product", "Quantity", "Revenue"]]
         for pid, qty in sorted(product_quantities.items(), key=lambda x: x[1], reverse=True)[:10]:
-            name = next((p["name"] for p in _products_db if p["id"] == pid), "Unknown")
+            prod = products.get(pid)
+            name = prod.name if prod else "Unknown"
             rev = product_revenue.get(pid, 0)
             prod_data.append([name, str(qty), f"${rev:,.2f}"])
         prod_table = Table(prod_data)
