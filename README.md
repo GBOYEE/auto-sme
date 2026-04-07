@@ -1,10 +1,35 @@
-# AutoSME 🚀
+# auto-sme — Deterministic AI Content Pipeline
 
-AI automation for African small businesses. Production-ready FastAPI backend with inventory, orders, WhatsApp integration, and PDF reporting.
+AI automation for structured content generation with QA validation and PDF output.
 
 [![CI](https://github.com/GBOYEE/auto-sme/actions/workflows/ci.yml/badge.svg)](https://github.com/GBOYEE/auto-sme/actions)
 [![Coverage](https://codecov.io/gh/GBOYEE/auto-sme/branch/main/graph/badge.svg)](https://codecov.io/gh/GBOYEE/auto-sme)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+## 🚀 What Problem This Solves
+
+Creating high-quality, structured educational content (or any templated documents) is time-consuming and repetitive. Manual writing leads to inconsistency; generic AI outputs lack formatting and quality control. You need a pipeline that combines AI generation with deterministic templates and PDF output.
+
+## ⚙️ How It Works
+
+auto-sme uses:
+- **Jinja2 templates** for deterministic structure
+- **LLM integration** (Ollama/OpenRouter) to fill content sections
+- **WeasyPrint** to generate polished PDFs with consistent styling
+- **QA validation layer** to check page counts, vocabulary, multiple choice counts
+- **Asset generation** (SVG diagrams, NGSS alignment, differentiation notes)
+
+You define a template with placeholders; the pipeline calls the LLM for each section, assembles the final document, runs QA, and outputs a print-ready PDF.
+
+## 📈 Why It Matters
+
+- **Speed**: Generate complete units (15+ pages) in hours instead of days
+- **Consistency**: Templates ensure every output meets formatting standards
+- **Quality**: QA layer catches structural issues before publication
+- **Automation**: Fully scripted — run end-to-end with one command
+- **Reproducible**: Deterministic workflow means you can regenerate identically
+
+Result: A production content pipeline you can trust for sellable products.
 
 ---
 
@@ -17,54 +42,6 @@ AI automation for African small businesses. Production-ready FastAPI backend wit
 - **Scheduled Tasks** — cron-like automation (future)
 - **Observability** — health checks, metrics, structured logging
 - **Secure** — API key authentication, CORS controls
-
----
-
-## 🚀 Quick Start
-
-```bash
-# Clone and install
-git clone https://github.com/GBOYEE/auto-sme
-cd auto-sme
-python -m venv .venv && source .venv/bin/activate
-pip install -e .[dev]
-
-# Set a strong API key
-export AUTOSME_API_KEY=super-secret-key
-
-# Run development server
-auto-sme
-
-# Or directly:
-uvicorn src.auto_sme.main:app --reload
-```
-
-Open API docs: http://localhost:8000/docs
-
----
-
-## 🔐 Authentication
-
-All endpoints (except `/webhook/whatsapp`) require an API key:
-
-```
-X-API-Key: your-secret-key
-```
-
-Set via `AUTOSME_API_KEY` environment variable.
-
----
-
-## 📦 API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/inventory` | Add product |
-| `GET` | `/api/v1/inventory` | List products |
-| `PATCH` | `/api/v1/inventory/{id}?delta=N` | Adjust stock (+/-) |
-| `POST` | `/api/v1/orders` | Create order (deducts stock) |
-| `GET` | `/api/v1/reports/sales?start_date=...&end_date=...` | PDF sales report |
-| `POST` | `/webhook/whatsapp` | Twilio WhatsApp webhook (public) |
 
 ---
 
@@ -124,7 +101,55 @@ Full architecture guide: [README-PRODUCTION.md](README-PRODUCTION.md#architectur
 
 ---
 
-## 🛠️ Development
+## 🚀 Quick Start
+
+```bash
+# Clone and install
+git clone https://github.com/GBOYEE/auto-sme
+cd auto-sme
+python -m venv .venv && source .venv/bin/activate
+pip install -e .[dev]
+
+# Set a strong API key
+export AUTOSME_API_KEY=super-secret-key
+
+# Run development server
+auto-sme
+
+# Or directly:
+uvicorn src.auto_sme.main:app --reload
+```
+
+Open API docs: http://localhost:8000/docs
+
+---
+
+## 🔐 Authentication
+
+All endpoints (except `/webhook/whatsapp`) require an API key:
+
+```
+X-API-Key: your-secret-key
+```
+
+Set via `AUTOSME_API_KEY` environment variable.
+
+---
+
+## 📦 API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/inventory` | Add product |
+| `GET` | `/api/v1/inventory` | List products |
+| `PATCH` | `/api/v1/inventory/{id}?delta=N` | Adjust stock (+/-) |
+| `POST` | `/api/v1/orders` | Create order (deducts stock) |
+| `GET` | `/api/v1/reports/sales?start_date=...&end_date=...` | PDF sales report |
+| `POST` | `/webhook/whatsapp` | Twilio WhatsApp webhook (public) |
+
+---
+
+## 🧪 Development
 
 ```bash
 # Install pre-commit hooks
