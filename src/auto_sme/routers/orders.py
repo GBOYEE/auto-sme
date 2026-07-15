@@ -31,7 +31,6 @@ class Order(OrderCreate):
 
 def process_order(customer_phone: str, items: List[dict], customer_name: Optional[str] = None, db: Session = None) -> Order:
     """Create order and deduct stock atomically."""
-    total = sum(item["quantity"] * item["unit_price"] for item in items)
     order = create_order(
         db=db,
         customer_phone=customer_phone,

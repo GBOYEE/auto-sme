@@ -1,7 +1,6 @@
 """CRUD and model validation tests."""
 import pytest
-from auto_sme.database import Base, get_db
-from auto_sme.models import Product, Order, Task, OptOut
+from auto_sme.database import Base
 from auto_sme.crud import (
     create_product,
     get_products,

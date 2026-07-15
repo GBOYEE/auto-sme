@@ -1,5 +1,5 @@
 """Tasks router — CRUD for scheduled tasks."""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime

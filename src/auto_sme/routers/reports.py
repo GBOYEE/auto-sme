@@ -1,7 +1,6 @@
 """Reports router — sales PDF generation."""
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from typing import List
 from datetime import datetime
 from io import BytesIO
 from reportlab.lib.pagesizes import A4

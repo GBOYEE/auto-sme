@@ -1,5 +1,5 @@
 """WhatsApp webhook router for Twilio integration."""
-from fastapi import APIRouter, Request, Depends, HTTPException
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import Response
 from twilio.twiml.messaging_response import MessagingResponse
 from sqlalchemy.orm import Session

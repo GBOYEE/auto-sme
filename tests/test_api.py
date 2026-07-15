@@ -1,6 +1,4 @@
 """API endpoint tests for AutoSME."""
-import pytest
-from auto_sme.models import Product, Order, Task, OptOut
 
 
 class TestHealth:

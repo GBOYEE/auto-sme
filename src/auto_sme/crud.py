@@ -14,7 +14,7 @@ def create_product(db: Session, name: str, price: float, unit: str, stock: int =
         unit=unit,
         stock=stock,
         low_stock_threshold=low_stock_threshold,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
     db.add(prod)
     db.commit()
@@ -43,7 +43,7 @@ def create_order(db: Session, customer_phone: str, items: List[dict], customer_n
         items=items,
         total_amount=total,
         status="pending",
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
     db.add(order)
     db.commit()
@@ -71,7 +71,7 @@ def create_task(db: Session, name: str, cron: str, action: str, payload: Optiona
         cron=cron,
         action=action,
         payload=payload or {},
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
     db.add(task)
     db.commit()
@@ -87,7 +87,7 @@ def get_tasks(db: Session, status: Optional[str] = None) -> List[Task]:
 
 # Opt-outs
 def opt_out(db: Session, phone: str) -> OptOut:
-    opt = OptOut(phone=phone, opted_out_at=datetime.utcnow())
+    opt = OptOut(phone=phone, opted_out_at=datetime.now(timezone.utc))
     db.add(opt)
     db.commit()
     db.refresh(opt)

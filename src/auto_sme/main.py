@@ -5,13 +5,12 @@ import uuid
 import logging
 from typing import Dict
 
-from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from .routers import tasks, inventory, orders, reports, whatsapp
-from .database import init_db, get_db
-from .dependencies import verify_api_key
+from .database import init_db
 
 # Configure structured logging
 logging.basicConfig(
