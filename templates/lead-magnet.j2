@@ -1,0 +1,8 @@
+<html><head><meta charset="utf-8"><style>{{ css }}</style></head>
+<body>
+{% include "_cover.j2" %}
+<div class="toc"><h2>Contents (TOC)</h2><ol>{% for s in doc.sections %}<li>{{ s.heading }}</li>{% endfor %}</ol></div>
+{% for s in doc.sections %}<h2>{{ s.heading }}</h2><p>{{ s.body }}</p>{% endfor %}
+{% include "_cta.j2" %}
+{% include "_footer.j2" %}
+</body></html>
