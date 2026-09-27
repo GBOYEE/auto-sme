@@ -11,13 +11,18 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 STYLES_DIR = os.path.join(BASE_DIR, "styles")
 
 
-def render_html(doc: Document, style: str = "modern") -> str:
+def render_html(doc: Document, style: str = "modern", visual_score: int | None = None, engine: str = "preview") -> str:
     env = Environment(loader=FileSystemLoader(TEMPLATES_DIR), autoescape=True)
     name = "mini-ebook.j2" if doc.kind == "mini-ebook" else "lead-magnet.j2"
     css_path = os.path.join(STYLES_DIR, f"{style}.css")
     css = open(css_path, encoding="utf-8").read() if os.path.exists(css_path) else ""
     tpl = env.get_template(name)
-    return tpl.render(doc=doc, style=style, css=css)
+    return tpl.render(doc=doc, style=style, css=css, visual_score=visual_score, engine=engine)
+
+
+def load_css(style: str = "modern") -> str:
+    css_path = os.path.join(STYLES_DIR, f"{style}.css")
+    return open(css_path, encoding="utf-8").read() if os.path.exists(css_path) else ""
 
 
 def _fallback_pdf(html: str, out_path: str, title: str) -> None:

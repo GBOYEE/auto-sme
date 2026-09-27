@@ -1,1 +1,1 @@
-<div class="footer"><p>QA stamp: TOC + CTA verified — {{ doc.title }} — {{ doc.cta }}</p></div>
+<div class="footer"><p>QA stamp: TOC + CTA verified — {{ doc.title }} — {{ doc.cta }}{% if visual_score is not none %} — Visual {{ visual_score }}/100 ({{ engine }}){% endif %}</p></div>
