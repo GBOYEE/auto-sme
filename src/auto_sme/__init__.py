@@ -1,2 +1,2 @@
-"""AutoSME — AI Automation for African Small Businesses."""
-__version__ = "0.1.0"
+"""AUTO-SME V1 — deterministic content engine (service-production, not SaaS)."""
+__version__ = "1.0.0"
