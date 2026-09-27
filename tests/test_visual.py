@@ -12,16 +12,16 @@ def test_target_look_scores_high_without_pdf():
         assert s >= 80, (style, s)
 
 
-def test_fallback_pdf_caps_footer_points_honestly(tmp_path):
+def test_styled_pdf_scores_high_with_hierarchy(tmp_path):
     from auto_sme.pdf import html_to_pdf
 
     doc = generate(topic="T", audience="A", cta="+2348000000000")
     html = render_html(doc, style="modern")
     out = str(tmp_path / "f.pdf")
-    engine = html_to_pdf(html, out, title=doc.title)
+    engine = html_to_pdf(html, out, title=doc.title, doc=doc, style="modern", visual_score=90)
     s, breakdown = validate_visual(html, load_css("modern"), pdf_path=out, engine=engine)
-    assert engine == "fallback"
-    assert s >= 70  # structure strong, render capped
+    assert engine in ("styled", "weasyprint")
+    assert s >= 90, (engine, s, breakdown)
     assert any("footer" in b for b in breakdown)
 
 

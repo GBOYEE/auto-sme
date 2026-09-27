@@ -30,16 +30,16 @@ def generate_cmd(
     # Pass 1: pre-score from HTML/CSS (no PDF yet) to stamp on last page
     pre_score, _ = validate_visual(preview, css, pdf_path="", engine="preview")
     html = render_html(doc, style=style, visual_score=pre_score, engine="preview")
-    engine = html_to_pdf(html, out, title=doc.title)
+    engine = html_to_pdf(html, out, title=doc.title, doc=doc, style=style, visual_score=pre_score)
     ok2, reasons2 = validate_pdf(out)
     if not ok2:
         typer.echo(f"QA-PDF FAIL: {reasons2}")
         raise typer.Exit(3)
-    # Pass 2: final visual score with real PDF + engine, restamp if weasyprint
+    # Pass 2: final visual score with real PDF + engine, restamp if styled/weasyprint
     final, breakdown = validate_visual(html, css, pdf_path=out, engine=engine)
-    if engine == "weasyprint" and final != pre_score:
+    if engine in ("weasyprint", "styled") and final != pre_score:
         html2 = render_html(doc, style=style, visual_score=final, engine=engine)
-        html_to_pdf(html2, out, title=doc.title)
+        html_to_pdf(html2, out, title=doc.title, doc=doc, style=style, visual_score=final)
         final, breakdown = validate_visual(html2, css, pdf_path=out, engine=engine)
     typer.echo(f"OK [{engine}] {out} — Visual {final}/100")
     for line in breakdown:

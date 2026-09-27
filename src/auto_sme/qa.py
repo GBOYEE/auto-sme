@@ -144,10 +144,10 @@ def validate_visual(
         foot += 4
     if "qa stamp" in low:
         foot += 2
-    if engine == "weasyprint" and pdf_ok:
+    if engine in ("weasyprint", "styled") and pdf_ok:
         foot += 4
     elif pdf_ok:
-        foot += 1  # fallback single-page: stamp present but not per-page
+        foot += 1  # minimal single-page fallback: stamp present but not per-page
     score += foot
     out.append(f"footer {foot}/10 engine={engine}")
 
