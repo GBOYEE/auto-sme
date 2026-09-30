@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md", "docs/00-v1-contract.md", "docs/ROADMAP.md"],
+  "skill": ["disciplined-changes"],
+  "tool_output": {
+    "max_lines": 300,
+    "max_bytes": 30720
+  },
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 10000
+  }
+}
